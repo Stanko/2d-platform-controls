@@ -1,4 +1,4 @@
-# Vanilla JS 2D platform controls
+# 2D platform controls
 
 ## Work in progress
 
