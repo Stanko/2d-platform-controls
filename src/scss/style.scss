@@ -1,0 +1,87 @@
+@import '_reset.scss';
+
+$blue: rgb(0, 115, 255);
+$light-blue: rgb(88, 170, 229);
+$white: #eef3f5;
+$gray: #555;
+
+.in-iframe .hide-in-iframe {
+  display: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue',
+    Helvetica, Inter, Arial, 'Noto Sans', sans-serif;
+  line-height: 1.5;
+  overflow-x: hidden;
+  background: #18181b;
+  color: $white;
+}
+
+h1 {
+  font-weight: bold;
+}
+
+a {
+  color: $light-blue;
+  border-bottom: 1px solid transparent;
+  transition: color 250ms, border 250ms;
+
+  &:hover {
+    color: $white;
+    border-bottom-color: $white;
+  }
+}
+
+ul {
+  margin: 20px 0 50px;
+}
+
+.wrapper {
+  padding: 30px;
+}
+
+.back {
+  margin-bottom: 20px;
+  display: inline-block;
+}
+
+.status {
+  margin-top: 10px;
+}
+
+.game {
+  margin-top: 50px;
+  position: relative;
+  height: 1px;
+}
+
+.player {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: $blue;
+
+  top: -10px;
+  left: -10px;
+}
+
+.trail-point {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  top: -1px;
+  left: -1px;
+}
+
+.touchscreen-message {
+  margin-top: 50px;
+  max-width: 300px;
+  display: none;
+}
+
+@media (hover: none) {
+  .touchscreen-message {
+    display: block;
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "vanilla-js-2d-platform-controls",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "parcel ./src/index.html",
+    "build": "rm -rf ./docs && parcel build ./src/index.html --dist-dir ./docs --public-url ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Stanko/vanilla-js-2d-platform-controls.git"
+  },
+  "author": "Stanko Tadić",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Stanko/vanilla-js-2d-platform-controls/issues"
+  },
+  "homepage": "https://muffinman.io/vanilla-js-2d-platform-controls/",
+  "dependencies": {
+    "parcel": "^2.4.1"
+  },
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.4.1"
+  }
+}
