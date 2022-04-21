@@ -1,13 +1,5 @@
-// ----- Types
-type Vector = {
-  x: number;
-  y: number;
-};
-
-type Trail = Array<{
-  color: string;
-  position: Vector;
-}>;
+import { Trail, Vector } from './types';
+import easings from './easings';
 
 // ----- Constants
 
@@ -18,9 +10,18 @@ const FRAME_DURATION: number = 1000 / 60;
 // Game speed
 const speed: number = 1;
 
-const acceleration: number = 1 * speed;
-const deceleration: number = 2 * speed;
-const maxSpeed: number = 5 * speed;
+// Movement
+const accelerationGround: number = 1 * speed;
+const decelerationGround: number = 2 * speed;
+const maxSpeed: number = 8 * speed;
+
+const decelerationAir: number = 0.5 * speed;
+
+// Jumping
+const initialJumpVelocity: number = 8 * speed;
+const jumpDeceleration: number = 0.4 * speed;
+const jumpFall: number = 1 * speed;
+const jumpAllowThreshold: number = 30;
 
 const velocity: Vector = {
   x: 0,
@@ -32,19 +33,26 @@ const position: Vector = {
   y: 0,
 };
 
-const trailMaxLength = 50;
+let isOnGround: boolean = true;
+let isJumpLegal: boolean = true;
+
+const trailMaxLength: number = 200;
 const trail: Trail = [];
-let trailColor;
+let trailColor: string;
 
 // Render
 const statusElement = document.querySelector('.status') as HTMLPreElement;
 const playerElement = document.querySelector('.player') as HTMLDivElement;
 const trailElement = document.querySelector('.trail') as HTMLDivElement;
+const jumpElement = document.querySelector('.jump') as HTMLDivElement;
 
 function render() {
   // status
   statusElement.innerHTML = `position: ${JSON.stringify(position)}\n`;
   statusElement.innerHTML += `velocity: ${JSON.stringify(velocity)}`;
+  statusElement.innerHTML += isJumpLegal
+    ? '<div class="jump-status jump-status--legal" />'
+    : '<div class="jump-status jump-status--illegal" />';
 
   // player
   playerElement.style.transform = `translate(${
@@ -63,7 +71,7 @@ function renderTrail() {
       class="trail-point" 
       style="
         background: ${point.color};
-        transform: translate(${x}px, ${y}px);
+        transform: translate(${x}px, ${-y}px);
       "></div>`;
   }
 
@@ -83,6 +91,13 @@ const keys = {
 
 window.addEventListener('keydown', (e) => {
   activeKeys[e.key] = true;
+
+  if (e.key === keys.SPACE && !e.repeat) {
+    jumpElement.style.transform = `translate(${
+      position.x
+    }px, ${-position.y}px)`;
+    jumpElement.innerHTML = position.y.toFixed(0);
+  }
 });
 
 window.addEventListener('keyup', (e) => {
@@ -90,20 +105,6 @@ window.addEventListener('keyup', (e) => {
 });
 
 // ----- Update
-function cap(value: number, min: number, max: number) {
-  if (value < min) {
-    trailColor = 'silver';
-    return min;
-  }
-
-  if (value > max) {
-    trailColor = 'silver';
-    return max;
-  }
-
-  return value;
-}
-
 function updateHorizontalMovement(delta: number) {
   const isLeftPressed = activeKeys[keys.LEFT];
   const isRightPressed = activeKeys[keys.RIGHT];
@@ -114,38 +115,49 @@ function updateHorizontalMovement(delta: number) {
   const isMovingRight = velocity.x > 0;
   const isMovingLeft = velocity.x < 0;
 
-  trailColor = 'silver';
+  const deceleration = isOnGround ? decelerationGround : decelerationAir;
 
-  // Increase velocity while arrows are pressed
   if (isExclusivelyLeft) {
     trailColor = 'lime';
+
+    // Left arrow is pressed
     if (isMovingRight) {
+      // Slow down if player is already moving right
       velocity.x -= deceleration * delta;
     } else {
-      velocity.x -= acceleration * delta;
+      // If not, accelerate to the left
+      velocity.x -= accelerationGround * delta;
     }
   } else if (isExclusivelyRight) {
     trailColor = 'lime';
+
+    // Right arrow is pressed
     if (isMovingLeft) {
+      // Slow down if player is already moving left
       velocity.x += deceleration * delta;
     } else {
-      velocity.x += acceleration * delta;
+      // If not, accelerate to the right
+      velocity.x += accelerationGround * delta;
     }
   } else {
-    // Deaccelerate if both, on no arrows are pressed
     trailColor = 'red';
 
+    // Either both or no horizontal arrows are pressed
+    // Decelerate to the stop
+
     if (isMovingRight) {
+      // Player is moving right, decelerate
       velocity.x -= deceleration * delta;
 
-      // Don't start moving in the opposite direction
+      // When velocity starts going in the opposite direction, stop the player
       if (velocity.x < 0) {
         velocity.x = 0;
       }
     } else if (isMovingLeft) {
+      // Player is moving left, decelerate
       velocity.x += deceleration * delta;
 
-      // Don't start moving in the opposite direction
+      // When velocity starts going in the opposite direction, stop the player
       if (velocity.x > 0) {
         velocity.x = 0;
       }
@@ -153,9 +165,52 @@ function updateHorizontalMovement(delta: number) {
   }
 
   // Cap at maximum speed
-  velocity.x = cap(velocity.x, -maxSpeed, maxSpeed);
+  if (velocity.x > maxSpeed) {
+    trailColor = 'silver';
+    velocity.x = maxSpeed;
+  } else if (velocity.x < -maxSpeed) {
+    trailColor = 'silver';
+    velocity.x = -maxSpeed;
+  }
 
-  position.x = position.x + velocity.x;
+  // Update player's position using new velocity value
+  position.x += velocity.x * delta;
+}
+
+function updateVerticalMovement(delta: number) {
+  const isJumpPressed: boolean = activeKeys[keys.SPACE];
+  isOnGround = position.y === 0;
+
+  if (isOnGround) {
+    if (isJumpPressed && isJumpLegal) {
+      velocity.y = initialJumpVelocity;
+      trailColor = 'blue';
+      isJumpLegal = false;
+    }
+  } else {
+    if (isJumpPressed && velocity.y > 0) {
+      trailColor = 'blue';
+      velocity.y -= jumpDeceleration * delta;
+    } else {
+      velocity.y -= jumpFall * delta;
+      // velocity.y *= 1.1;
+      trailColor = 'purple';
+    }
+  }
+
+  // Update position
+  position.y += velocity.y * delta;
+
+  // Prevent player going into the ground
+  if (position.y < 0) {
+    position.y = 0;
+    velocity.y = 0;
+  }
+
+  if (!isJumpPressed && position.y < jumpAllowThreshold) {
+    // allow jumping again
+    isJumpLegal = true;
+  }
 }
 
 function updateTrail() {
@@ -182,7 +237,7 @@ function updateTrail() {
 }
 
 // ----- Game loop
-let lastUpdate = performance.now();
+let lastUpdate: number = performance.now();
 
 function gameLoop() {
   const now = performance.now();
@@ -190,6 +245,7 @@ function gameLoop() {
 
   // Update game state
   updateHorizontalMovement(delta);
+  updateVerticalMovement(delta);
   updateTrail();
 
   // Render
@@ -200,6 +256,7 @@ function gameLoop() {
 
   // Next frame
   requestAnimationFrame(gameLoop);
+  // setTimeout(gameLoop, 30);
 }
 
 gameLoop();
